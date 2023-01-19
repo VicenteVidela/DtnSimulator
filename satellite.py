@@ -40,9 +40,6 @@ current_time = 0
 try:
   while True:
     return_time = satellite.recv(1024, current_time)
-    # If a package couldn't be sent due to time
-    # if return_time > 0:
-    #   current_time = time.time() - start_time   # Get current time
-    #   elapsed_time = 0                          # For keeping track of how much time has passed
+    current_time = time.time() - start_time    # For keeping track of how much time has passed
 except KeyboardInterrupt:
   print('Program finished.')

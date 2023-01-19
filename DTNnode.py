@@ -1,5 +1,4 @@
-import ast
-import socket, time, json
+import socket, time, json, ast
 
 class DTNnode:
   # initialize the variables for the dtn node
@@ -87,7 +86,6 @@ class DTNnode:
         # If route expired or the bundle can't make it in time or the bundle is bigger than what the route can handle
         if ((current_time > int(r['endTime'])) or (int(r['startTime']) + int(r['distance'])) > bundle.get_deadline()) \
             or (bundle.get_size() > (int(r['rate']) * (int(r['endTime']) - int(r['startTime'])))): continue # discard it
-
         # else, add it to the list
         candidate_routes.append(r)
 
@@ -124,10 +122,7 @@ class DTNnode:
     # If a route was found, add it to queue
     if (updated_bundle.get_route() is not None):
       self.send_queue.append(updated_bundle)
-      time = self.send_first_in_queue(current_time)
-      if (time > 0):
-        # mandar despues
-        pass
+      self.send_first_in_queue(current_time)
     else:
       #TODO Add to limbo
       pass
@@ -147,9 +142,11 @@ class DTNnode:
       return -1
 
     route_start_time = bundle_to_send.get_route()['startTime']
+    delta_time = route_start_time-current_time
     # Route not yet available, have to wait
-    if (current_time < route_start_time):
-      return route_start_time
+    if (delta_time > 0):
+      print('Route not yet available, have to wait', str(delta_time)+'s')
+      time.sleep(delta_time)
 
     # Passed all checks, delete it from the list and send
     bundle_to_send = self.send_queue.pop(0)
@@ -160,6 +157,7 @@ class DTNnode:
   def send(self, bundle):
     dest = self.get_address(bundle.get_next_hop())
     self.socketSend.sendto(str(bundle).encode(), dest)
+    print('Bundle forwarded to node:', bundle.get_next_hop())
 
   # Receive a bundle, print if it was its destination, or forward it
   def recv(self, buff_size, current_time):
