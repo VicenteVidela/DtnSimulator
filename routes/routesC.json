@@ -1,0 +1,23 @@
+{
+  "A": [
+    {
+      "route": "A B C",
+      "nextHop": "B",
+      "startTime": 10,
+      "endTime": 100,
+      "rate": 50,
+      "distance": 1
+    }
+  ],
+
+  "B": [
+    {
+      "route": "B C",
+      "nextHop": "B",
+      "startTime": 0,
+      "endTime": 100,
+      "rate": 100,
+      "distance": 0
+    }
+  ]
+}

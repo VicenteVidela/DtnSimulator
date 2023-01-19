@@ -1,0 +1,39 @@
+{
+  "B": [
+    {
+      "route": "B A",
+      "nextHop": "B",
+      "startTime": 0,
+      "endTime": 100,
+      "rate": 200,
+      "distance": 1
+    },
+    {
+      "route": "B C A",
+      "nextHop": "C",
+      "startTime": 20,
+      "endTime": 70,
+      "rate": 100,
+      "distance": 1
+    }
+  ],
+
+  "C": [
+    {
+      "route": "C A",
+      "nextHop": "C",
+      "startTime": 20,
+      "endTime": 70,
+      "rate": 100,
+      "distance": 1
+    },
+    {
+      "route": "C B A",
+      "nextHop": "B",
+      "startTime": 0,
+      "endTime": 100,
+      "rate": 100,
+      "distance": 1
+    }
+  ]
+}
