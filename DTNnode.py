@@ -1,36 +1,62 @@
-import socket, time, json, ast
+from __future__ import annotations
+import socket, time, json
+from bundle import bundle
 
 class DTNnode:
-  # initialize the variables for the dtn node
-  def __init__(self, id):
-    self.id = id              # Id for identifying the satellite
+  """
+  A class for creating a Delay-Tolerant Network Node,
+  made for satellite networks in mind.
+  """
+
+  def __init__(self, id: str) -> DTNnode:
+    """
+    A class for creating a Delay-Tolerant Network Node,
+    made for satellite networks in mind.
+
+    Parameters
+    ----------
+    id : str
+      Unique identifier of the node
+    """
+
+    self.id = id              # Id for identifying the node
     self.socketRecv = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)   # sockets for receiving and
     self.socketSend = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)   # sending messages
-    self.address = None       # Satellite address
+    self.address = None       # Satellite node
     self.contact_plan = None  # Contact plan
-    self.address_list = {}  # Dictionary of the different addresses of the other nodes
+    self.address_list = {}    # Dictionary of the different addresses of the other nodes
     self.route_list = None    # List of route lists for the other nodes
     self.send_queue = []      # List for storing all the messages that have to be sent when available
 
-  # Sets the timeout of the receiving socket
-  def settimeout(self, timeout):
+  def settimeout(self, timeout: float) -> None:
+    """
+    Sets the timeout of the receiving socket of the node
+    """
     self.socketRecv.settimeout(timeout)
 
-  # Bind receiving socket to the address
-  def bind(self, address):
+  def bind(self, address: tuple(str, int)) -> None:
+    """
+    Bind receiving socket to the address
+    """
     self.address = address
     self.socketRecv.bind(self.address)
 
-  # Get address corresponding to node id
-  def get_address(self, id):
+  def get_address(self, id: str) -> tuple(str, int):
+    """
+    Get address corresponding to node id
+    """
+    # Since all is run on localhost for now, only the ports are unique per node
     return ('127.0.0.1', self.address_list[id])
 
-  # Update contact plan with new one and copmute the route lists if necessary
-  def update_contact_plan(self, new_plan_dir, compute_routes=False):
+  def update_contact_plan(self, new_plan_directory: str, compute_routes: bool = False) -> None:
+    """
+    Update contact plan with new one and compute the route lists if necessary.
+    Contact plan directory is required.
+    """
     # Open file and read it
-    with open(new_plan_dir) as f:
+    with open(new_plan_directory) as f:
       # Check file extension
-      if (new_plan_dir.split('.')[-1] != 'txt'):
+      if (new_plan_directory.split('.')[-1] != 'txt'):
         raise TypeError('File is not .txt')
       contactsString = f.read()
     f.close()
@@ -62,19 +88,25 @@ class DTNnode:
       if (origin != self.id or current_time >= (end_time + distance)):
         continue
 
-  # Update route list with a new one
-  def update_route_list(self, new_list_dir):
+  def update_route_list(self, new_list_directory: str) -> None:
+    """
+    Update route list with a new one.
+    Route list directory is required.
+    """
     # Open file and read it
-    with open(new_list_dir) as f:
+    with open(new_list_directory) as f:
       # Check file extension
-      if (new_list_dir.split('.')[-1] != 'json'):
+      if (new_list_directory.split('.')[-1] != 'json'):
         raise TypeError('File is not .json')
       data = json.load(f)
       self.route_list = data
     f.close()
 
-  # Check possible routes for a bundle
-  def check_routes(self, bundle, current_time):
+  def check_routes(self, bundle: bundle, current_time: float) -> bundle:
+    """
+    Check possible routes for a bundle.
+    Returns the bundle with updated route and/or next hop.
+    """
     # Get bundle destination
     dest = bundle.get_dest()
 
@@ -103,14 +135,16 @@ class DTNnode:
         i = route_splitted.index(self.id)
       except ValueError:
         print('Current node not in route, something happened.')
-        return
+        return bundle
       # Set the next hop for the bundle
       bundle.set_next_hop(route_splitted[i-1])
 
     return bundle
 
-  # Add a bundle to send queue
-  def add_to_queue(self, bundle, current_time):
+  def add_to_queue(self, bundle: bundle, current_time: float) -> None:
+    """
+    Add a bundle to send queue of the node
+    """
     # If deadline already passed, discard it
     if (0 < bundle.get_deadline() <= current_time):
       print("Bundle deadline already passed, discarding.")
@@ -127,8 +161,10 @@ class DTNnode:
       #TODO Add to limbo
       pass
 
-  # Get the first bundle in queue and try to send
-  def send_first_in_queue(self, current_time):
+  def send_first_in_queue(self, current_time: float) -> float:
+    """
+    Get the first bundle in queue and try to send it
+    """
     # If list is empty, do nothing
     if (not self.send_queue):
       print("Queue list is empty.")
@@ -153,14 +189,19 @@ class DTNnode:
     self.send(bundle_to_send)
     return 0
 
-  # Send a bundle forward to the next hop
-  def send(self, bundle):
+  def send(self, bundle: bundle) -> None:
+    """
+    Send a bundle forward to the next hop
+    """
     dest = self.get_address(bundle.get_next_hop())
     self.socketSend.sendto(str(bundle).encode(), dest)
     print('Bundle forwarded to node:', bundle.get_next_hop())
 
-  # Receive a bundle, print if it was its destination, or forward it
-  def recv(self, buff_size, current_time):
+  def recv(self, buff_size: int, current_time: float) -> int:
+    """
+    Receives a bundle Then prints if it's destination was this node,
+    or forward it through the appropiate route
+    """
     # For counting how many seconds have passed since the call of the function
     start_time = time.time()
 
@@ -190,86 +231,6 @@ class DTNnode:
     current_time += (end_time - start_time)
 
     # If it is for other node, forward it
-    return self.add_to_queue(recv_bundle, current_time)
+    self.add_to_queue(recv_bundle, current_time)
+    return 1
 
-
-
-class bundle:
-  # initialize bundle with all its contents
-  def __init__(self, message, src, dest, size='00000000',p=0, crit=False, cust=False, frag=True, deadline=0):
-    self.message = message    # The message contained in this bundle
-    self.source = src         # Source node of the bundle
-    self.destination = dest   # Destination node of the bundle
-    self.size = size          # Size will always be 8 bytes, for simplicity
-    self.priority = p         # The priority of the bundle
-    self.critical = crit      # Whether it is critical (must transmit to all possible nodes)
-    self.custody = cust       # Custody request flag (if custody of the bundle was requested)
-    self.fragment = frag      # Fragmentation authorized flag
-    self.deadline = deadline  # TTL in sec (0 means infinite)
-    self.route = None         # For checking if it has an assigned route
-    self.next_hop = None      # For using the route assigned
-
-    if (self.size == '00000000'): self.compute_size() # Size of the bundle in bytes
-
-  # Pass to string
-  def __str__(self):
-    crit = '1' if self.critical else '0'
-    cust = '1' if self.custody else '0'
-    frag = '1' if self.fragment else '0'
-    return self.source + '|||' + self.destination + '|||' + self.size + '|||' + str(self.priority) + '|||' + crit + '|||' \
-      + cust + '|||' + frag + '|||' + str(self.deadline) + '|||' + self.message + '|||' + str(self.route) + '|||' + str(self.next_hop)
-
-  # Back from string to bundle
-  @staticmethod
-  def to_bundle(string):
-    str_splitted = string.split('|||')
-    source, destination, size, priority, critical, custody, fragment, deadline, message = str_splitted[0:9]
-    new_bundle = bundle(message, source, destination, size=size, p=priority, crit=critical, cust=custody, frag=fragment, deadline=deadline)
-    if (len(str_splitted) >= 10):
-      new_bundle.set_route(ast.literal_eval(str_splitted[9]))
-    return new_bundle
-
-  # Get message of the bundle
-  def get_message(self):
-    return self.message
-
-  # Get destination of the bundle
-  def get_dest(self):
-    return self.destination
-
-  # Get route of the bundle
-  def get_route(self):
-    return self.route
-
-  # Get next_hop of the bundle
-  def get_next_hop(self):
-    return self.next_hop
-
-  # Get size of the bundle
-  def get_size(self):
-    return int(self.size)
-
-  # Get deadline of the bundle
-  def get_deadline(self):
-    return int(self.deadline)
-
-  # Calculate the total size of the bundle in bytes
-  def compute_size(self):
-    new_size = str(len(str(self).encode()))
-    while len(new_size) < 8:
-      new_size = '0' + new_size
-    self.size = new_size
-
-  # Set a new route for the bundle
-  def set_route(self, route):
-    # A route dict is passed
-    self.route = route
-    self.set_next_hop(route['nextHop'])
-
-  # Set the next hop for the route
-  def set_next_hop(self, hop):
-    self.next_hop = hop
-
-  # TODO
-  def fragment_message(self, max_size):
-    pass
