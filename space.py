@@ -13,18 +13,19 @@ class travelling_bundle:
   It receives the bundle, sleeps the distance in seconds
   and afterwards sends it to the destionation.
   """
-  def __init__(self, bundle: bundle, distance : int, destination: tuple[str, int]) -> None:
+  def __init__(self, bundle: bundle, distance : int, destination: tuple[str, int], next_hop_id: str) -> None:
     self.bundle = bundle    # The bundle to be sent
     self.timer = distance   # How much time it needs to travel
     self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # The socket to send the bundle
     self.destination = destination
+    self.next_hop_id = next_hop_id
 
   def send(self) -> None:
     """
     Send the associated bundle to the next hop
     """
     self.socket.sendto(str(self.bundle).encode(), self.destination)
-    print('Bundle arriving to node:', self.bundle.get_next_hop(), '\n')
+    print('Bundle arriving to node', self.next_hop_id, '\n')
 
 
 # Create the socket for space, which will receive the bundles
@@ -46,7 +47,7 @@ try:
     try:
       # Receive bundles
       bundle_recv, _ = spaceSocket.recvfrom(10000)
-      bundle_recv, destination = bundle_recv.decode().split('###')
+      bundle_recv, destination, next_hop_id = bundle_recv.decode().split('###')
       bundle_recv = bundle.to_bundle(bundle_recv)
       # Get the distance between the nodes
       distance = bundle_recv.route['distance']
@@ -55,9 +56,9 @@ try:
       destination = (destination_split[0][2:-1], int(destination_split[1][1:-1]))
 
       # Create a new instance that will wait and add it to the list
-      new_bundle = travelling_bundle(bundle_recv, distance, destination)
+      new_bundle = travelling_bundle(bundle_recv, distance, destination, next_hop_id)
       bundle_list.append(new_bundle)
-      print('Bundle travelling through space to its destination, node', new_bundle.bundle.get_next_hop(), '\n')
+      print('Bundle travelling through space to the next hop, node', next_hop_id, '\n')
     except TimeoutError:
       # Every second, see if bundles must be sent
       for b in bundle_list:

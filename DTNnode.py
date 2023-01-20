@@ -197,6 +197,7 @@ class DTNnode:
       if (len(candidate_routes) > 0):
         # If critical, send through all routes
         if bundle.critical:
+          candidate_routes.sort(key=lambda d: d['startTime'])
           critical_list = []
           # Return a list with bundles that will go to all routes
           for r in candidate_routes:
@@ -305,8 +306,9 @@ class DTNnode:
     Send a bundle simulating the delay associated to the distance
     that must be traveled through space
     """
-    dest = self.get_address(bundle.get_next_hop())
-    self.socketSend.sendto((str(bundle) + '###' + str(dest)).encode(), spaceAddress)
+    next_hop_id = bundle.get_next_hop()
+    dest = self.get_address(next_hop_id)
+    self.socketSend.sendto((str(bundle) + '###' + str(dest) + '###' + next_hop_id).encode(), spaceAddress)
 
   def recv(self, buff_size: int, current_time: float, alarm_on : bool = False, timer : int = 0) -> int:
     """
