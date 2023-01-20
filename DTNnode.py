@@ -10,7 +10,7 @@ class DTNnode:
   made for satellite networks in mind.
   """
 
-  def __init__(self, id: str) -> None:
+  def __init__(self, id: str, n_priorities: int) -> None:
     """
     A class for creating a Delay-Tolerant Network Node,
     made for satellite networks in mind.
@@ -19,6 +19,9 @@ class DTNnode:
     ----------
     id : str
       Unique identifier of the node
+
+    n_priorities: int
+      Number of priorities the bundles can have
     """
 
     self.id = id              # Id for identifying the node
@@ -28,7 +31,13 @@ class DTNnode:
     self.contact_plan = None  # Contact plan
     self.address_list = {}    # Dictionary of the different addresses of the other nodes
     self.route_list = None    # List of route lists for the other nodes
-    self.send_queue = []      # List for storing all the messages that have to be sent when available
+
+    self.n_priorities = n_priorities
+    # Dictionary for storing all the messages that have to be sent when available, stored by priority
+    self.send_queue = {}
+    for p in range(n_priorities, 0, -1):
+      self.send_queue[p] = []
+
 
   def settimeout(self, timeout: float) -> None:
     """
@@ -121,7 +130,7 @@ class DTNnode:
     # 3. Based on queue, check whether the route will be available when it reaches the front
     # Route End Time <= Earliest Transmission Opportunity (ETO)
     queue_available_time = max(current_time, route['startTime'])
-    for b in self.send_queue:
+    for b in self.send_queue[bundle.priority]:
       queue_available_time = max(queue_available_time, b.route['startTime'])
     if (route['endTime'] <= queue_available_time): return -1
 
@@ -232,7 +241,7 @@ class DTNnode:
     # If deadline already passed, discard it
     if (0 < bundle.get_deadline() <= current_time):
       print("Bundle deadline already passed, discarding.")
-      return
+      return 0
 
     # Check routes for the bundle and return updated bundle
     updated_bundle = self.check_routes(bundle, current_time)
@@ -244,12 +253,12 @@ class DTNnode:
     # Critical bundle
     if (type(updated_bundle) is list):
       for b in updated_bundle:
-        self.send_queue.append(b)
+        self.send_queue[b.priority].append(b)
       return self.send_bundles_in_queue(current_time)
 
     # If a route was found, add it to queue
     if (updated_bundle.get_route() is not None):
-      self.send_queue.append(updated_bundle)
+      self.send_queue[updated_bundle.priority].append(updated_bundle)
       # Start sending queue
       return self.send_bundles_in_queue(current_time)
     else:
@@ -257,26 +266,27 @@ class DTNnode:
       pass
 
   def send_bundles_in_queue(self, current_time: float) -> float:
-    delta_t = 0
-    # When delta_t==0, send was succesful
-    while (delta_t == 0):
-      delta_t = self.send_first_in_queue(current_time)
-      # If route is not yet available
-      if (delta_t > 0):
-        return delta_t
+    for p in range(self.n_priorities, 0, -1):
+      delta_t = 0
+      # When delta_t==0, send was succesful
+      while (delta_t == 0):
+        delta_t = self.send_first_in_queue(p, current_time)
+        # If route is not yet available
+        if (delta_t > 0):
+          return delta_t
     return 0
 
-  def send_first_in_queue(self, current_time: float) -> float:
+  def send_first_in_queue(self, priority: int, current_time: float) -> float:
     """
     Get the first bundle in queue and try to send it
     """
     # If list is empty, do nothing
-    if (not self.send_queue):
-      print("Queue list is empty.")
+    if (not self.send_queue[priority]):
+      print("Queue list", priority, "is empty.")
       return -1
 
     # Retrieve bundle from list
-    bundle_to_send = self.send_queue[0]
+    bundle_to_send = self.send_queue[priority][0]
     # Check deadline and discard it if it passed
     if (0 < bundle_to_send.get_deadline() <= current_time):
       print("Bundle deadline already passed, discarding.")
@@ -290,7 +300,7 @@ class DTNnode:
       return delta_time
 
     # Passed all checks, delete it from the list and send
-    bundle_to_send = self.send_queue.pop(0)
+    bundle_to_send = self.send_queue[priority].pop(0)
     self.send(bundle_to_send)
     return 0
 

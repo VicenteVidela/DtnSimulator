@@ -65,7 +65,12 @@ class bundle:
     """
     str_splitted = string.split('|||')
     source, destination, size, priority, critical, custody, fragment, deadline, message = str_splitted[0:9]
-    new_bundle = bundle(message, source, destination, size=size, p=priority, crit=critical, cust=custody, frag=fragment, deadline=deadline)
+
+    crit = True if critical=='1' else False
+    cust = True if custody=='1' else False
+    frag = True if fragment=='1' else False
+
+    new_bundle = bundle(message, source, destination, size=size, p=int(priority), crit=crit, cust=cust, frag=frag, deadline=deadline)
     if (len(str_splitted) >= 10):
       new_bundle.set_route(ast.literal_eval(str_splitted[9]))
     return new_bundle

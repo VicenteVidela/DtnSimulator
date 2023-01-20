@@ -11,7 +11,7 @@ except ValueError:
   exit()
 
 # Create the node
-satellite = DTNnode(id)
+satellite = DTNnode(id, 3)
 
 # Add contact plan
 try:
