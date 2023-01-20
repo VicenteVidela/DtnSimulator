@@ -103,35 +103,68 @@ class DTNnode:
       self.route_list = data
     f.close()
 
-  def is_candidate_route(self, bundle: bundle, route: dict, current_time: float) -> bool:
+  def is_candidate_route(self, bundle: bundle, route: dict, current_time: float) -> float:
     """
-    Checks if a given route is a plausible candidate for the bundle
+    Checks if a given route is a plausible candidate for the bundle.
+    If all passed, return Projected Arrival Time (PAT)
     """
 
     # 1. Route expired
     deadline = bundle.get_deadline()
-    if (deadline <= current_time): return False
+    if (deadline <= current_time): return -1
 
     # 2. Bundle deadline is before it can reach destination
     # Deadline <= Best Delivery Time (BDT
-    if (deadline <= current_time + route['distance']): return False
+    if (deadline <= current_time + route['distance']): return -1
 
     # 3. Based on queue, check whether the route will be available when it reaches the front
     # Route End Time <= Earliest Transmission Opportunity (ETO)
-    queue_available_time = current_time
+    queue_available_time = max(current_time, route['startTime'])
     for b in self.send_queue:
       queue_available_time = max(queue_available_time, b.route['startTime'])
-    if (route['endTime'] <= queue_available_time): return False
+    if (route['endTime'] <= queue_available_time): return -1
 
     # 4. Based on queue, check if it can reach destination on time
     # Deadline <= Projected Arrival Time (PAT)
-    if (deadline <= queue_available_time + route['distance']): return False
+    if (deadline <= queue_available_time + route['distance']): return -1
 
     # 5. The bundle size is less than the route volume
-    if (bundle.get_size() > (int(route['rate']) * (int(route['endTime']) - int(route['startTime'])))): return False
+    if (bundle.get_size() > (int(route['rate']) * (int(route['endTime']) - int(route['startTime'])))): return -1
 
     # Passed all checks yay!
-    return True
+    return queue_available_time + route['distance']
+
+  def select_best_route(self, route_list: list, pat_list: list) -> dict:
+    """
+    Given a list of routes, select the best one. This selection is done by these parameters,
+    in order, in case two or more routes end up in a tie:
+    1. Smallest PAT
+    2. Least number of hops
+    3. The one that ends the last
+    4. First index, between the ones that are tied
+    """
+
+    # 1. Smallest PAT
+    min_pat = min(pat_list)
+    min_pat_index = [idx for idx, value in enumerate(pat_list) if value == min_pat]
+    if (len(min_pat_index) == 1):
+      return route_list[min_pat_index[0]]
+
+    # 2. Least number of hops
+    min_pat_routes_len = [len(route_list[i]['route']) for i in min_pat_index]
+    min_hop = min(min_pat_routes_len)
+    min_hop_index = [idx for idx, value in enumerate(min_pat_routes_len) if value == min_hop]
+    if (len(min_hop_index) == 1):
+      return route_list[min_hop_index[0]]
+
+    # 3. The one that ends the last
+    end_time_last = [route_list[i]['endTime'] for i in min_hop_index]
+    max_time_last = max(end_time_last)
+    max_time_last_index = [idx for idx, value in enumerate(end_time_last) if value == max_time_last]
+    return route_list[max_time_last_index[0]]
+
+    # 4. First index, between the ones that are tied (same as 3, since the first index is selected anyway)
+    # return route_list[max_time_last_index[0]]
 
   def check_routes(self, bundle: bundle, current_time: float) -> bundle:
     """
@@ -145,6 +178,7 @@ class DTNnode:
     if (bundle.get_route() is None):
       all_routes = self.route_list[dest] # Get list of all routes (dictionaries) to the destination
       candidate_routes = []   # Where all candidate routes will be stored
+      route_pats = []
       for r in all_routes:
         # Routes must pass certain checks for them to be added
         # 1. Route expired
@@ -152,13 +186,14 @@ class DTNnode:
         # 3. Based on queue, check whether the route will be available when it reaches the front
         # 4. Based on queue, check if it can reach destination on time
         # 5. The bundle size is less than the route volume
-        if (self.is_candidate_route(bundle, r, current_time)):
+        pat = self.is_candidate_route(bundle, r, current_time)
+        if (pat > -1):
           # if everything is ok, add it to the list
           candidate_routes.append(r)
+          route_pats.append(pat)
 
-      # TODO get best route
       try:
-        best_route = candidate_routes[0]
+        best_route = self.select_best_route(candidate_routes, route_pats)
         bundle.set_route(best_route)
       except IndexError:
         print('No possible route found, putting bundle in limbo.')
