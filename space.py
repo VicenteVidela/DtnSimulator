@@ -1,5 +1,11 @@
 from bundle import bundle
-import socket, time
+import socket, time, sys, random
+
+# Get variables from console
+try:
+  loss_probability = float(sys.argv[1]) #Between 0 and 1
+except ValueError:
+  loss_probability = 0
 
 class travelling_bundle:
   """
@@ -61,6 +67,12 @@ try:
         else:
           # Else, decrease timer in one second
           b.timer -= 1
+          # Probability of bundle getting lost in space
+          n = random.random()
+          if (n < loss_probability):
+            bundle_list.remove(b)
+            print('Bundle lost! :c \n')
+
 
       print ("\033[A\033[A")
       print('Space running. Elapsed time:', str(round(time.time()-start_time)) + 's')
