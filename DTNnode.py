@@ -1,5 +1,6 @@
 import socket, time, json
 from bundle import bundle
+from copy import deepcopy
 
 spaceAddress = ('127.0.0.1', 8080)
 
@@ -166,7 +167,7 @@ class DTNnode:
     # 4. First index, between the ones that are tied (same as 3, since the first index is selected anyway)
     # return route_list[max_time_last_index[0]]
 
-  def check_routes(self, bundle: bundle, current_time: float) -> bundle:
+  def check_routes(self, bundle: bundle, current_time: float) -> bundle | list[bundle] | None:
     """
     Check possible routes for a bundle.
     Returns the bundle with updated route and/or next hop.
@@ -174,11 +175,11 @@ class DTNnode:
     # Get bundle destination
     dest = bundle.get_dest()
 
-    # If no route has been assigned, search one for it
+    # If no route has been assigned, search one for it. If it is critical, search all possible routes
     if (bundle.get_route() is None):
       all_routes = self.route_list[dest] # Get list of all routes (dictionaries) to the destination
       candidate_routes = []   # Where all candidate routes will be stored
-      route_pats = []
+      route_pats = []         # For storing the Projected Arrival Time of eaach route
       for r in all_routes:
         # Routes must pass certain checks for them to be added
         # 1. Route expired
@@ -192,10 +193,22 @@ class DTNnode:
           candidate_routes.append(r)
           route_pats.append(pat)
 
-      try:
-        best_route = self.select_best_route(candidate_routes, route_pats)
-        bundle.set_route(best_route)
-      except IndexError:
+      # If routes were found, search among them
+      if (len(candidate_routes) > 0):
+        # If critical, send through all routes
+        if bundle.critical:
+          critical_list = []
+          # Return a list with bundles that will go to all routes
+          for r in candidate_routes:
+            new_bundle = deepcopy(bundle)
+            new_bundle.set_route(r)
+            critical_list.append(new_bundle)
+          return critical_list
+        else:
+        # Search best route and set it to the bundle
+          best_route = self.select_best_route(candidate_routes, route_pats)
+          bundle.set_route(best_route)
+      else:
         print('No possible route found, putting bundle in limbo.')
 
     else:
@@ -204,8 +217,8 @@ class DTNnode:
       try:
         i = route_splitted.index(self.id)
       except ValueError:
-        print('Current node not in route, something happened.')
-        return bundle
+        print('Current node not in route, something happened. Discarding bundle')
+        return None
       # Set the next hop for the bundle
       bundle.set_next_hop(route_splitted[i-1])
 
@@ -222,6 +235,16 @@ class DTNnode:
 
     # Check routes for the bundle and return updated bundle
     updated_bundle = self.check_routes(bundle, current_time)
+
+    # Discarded bundle, continue
+    if (updated_bundle is None):
+      return 0
+
+    # Critical bundle
+    if (type(updated_bundle) is list):
+      for b in updated_bundle:
+        self.send_queue.append(b)
+      return self.send_bundles_in_queue(current_time)
 
     # If a route was found, add it to queue
     if (updated_bundle.get_route() is not None):
