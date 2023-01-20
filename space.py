@@ -4,7 +4,7 @@ import socket, time, sys, random
 # Get variables from console
 try:
   loss_probability = float(sys.argv[1]) #Between 0 and 1
-except ValueError:
+except IndexError:
   loss_probability = 0
 
 class travelling_bundle:
@@ -57,6 +57,7 @@ try:
       # Create a new instance that will wait and add it to the list
       new_bundle = travelling_bundle(bundle_recv, distance, destination)
       bundle_list.append(new_bundle)
+      print('Bundle travelling through space to its destination, node', new_bundle.bundle.get_next_hop(), '\n')
     except TimeoutError:
       # Every second, see if bundles must be sent
       for b in bundle_list:

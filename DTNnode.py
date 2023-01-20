@@ -103,6 +103,36 @@ class DTNnode:
       self.route_list = data
     f.close()
 
+  def is_candidate_route(self, bundle: bundle, route: dict, current_time: float) -> bool:
+    """
+    Checks if a given route is a plausible candidate for the bundle
+    """
+
+    # 1. Route expired
+    deadline = bundle.get_deadline()
+    if (deadline <= current_time): return False
+
+    # 2. Bundle deadline is before it can reach destination
+    # Deadline <= Best Delivery Time (BDT
+    if (deadline <= current_time + route['distance']): return False
+
+    # 3. Based on queue, check whether the route will be available when it reaches the front
+    # Route End Time <= Earliest Transmission Opportunity (ETO)
+    queue_available_time = current_time
+    for b in self.send_queue:
+      queue_available_time = max(queue_available_time, b.route['startTime'])
+    if (route['endTime'] <= queue_available_time): return False
+
+    # 4. Based on queue, check if it can reach destination on time
+    # Deadline <= Projected Arrival Time (PAT)
+    if (deadline <= queue_available_time + route['distance']): return False
+
+    # 5. The bundle size is less than the route volume
+    if (bundle.get_size() > (int(route['rate']) * (int(route['endTime']) - int(route['startTime'])))): return False
+
+    # Passed all checks yay!
+    return True
+
   def check_routes(self, bundle: bundle, current_time: float) -> bundle:
     """
     Check possible routes for a bundle.
@@ -116,11 +146,15 @@ class DTNnode:
       all_routes = self.route_list[dest] # Get list of all routes (dictionaries) to the destination
       candidate_routes = []   # Where all candidate routes will be stored
       for r in all_routes:
-        # If route expired or the bundle can't make it in time or the bundle is bigger than what the route can handle
-        if ((current_time > int(r['endTime'])) or (int(r['startTime']) + int(r['distance'])) > bundle.get_deadline()) \
-            or (bundle.get_size() > (int(r['rate']) * (int(r['endTime']) - int(r['startTime'])))): continue # discard it
-        # else, add it to the list
-        candidate_routes.append(r)
+        # Routes must pass certain checks for them to be added
+        # 1. Route expired
+        # 2. Bundle deadline is before it can reach destination
+        # 3. Based on queue, check whether the route will be available when it reaches the front
+        # 4. Based on queue, check if it can reach destination on time
+        # 5. The bundle size is less than the route volume
+        if (self.is_candidate_route(bundle, r, current_time)):
+          # if everything is ok, add it to the list
+          candidate_routes.append(r)
 
       # TODO get best route
       try:
