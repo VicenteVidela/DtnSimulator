@@ -1,6 +1,7 @@
-from __future__ import annotations
 import socket, time, json
 from bundle import bundle
+
+spaceAddress = ('127.0.0.1', 8080)
 
 class DTNnode:
   """
@@ -8,7 +9,7 @@ class DTNnode:
   made for satellite networks in mind.
   """
 
-  def __init__(self, id: str) -> DTNnode:
+  def __init__(self, id: str) -> None:
     """
     A class for creating a Delay-Tolerant Network Node,
     made for satellite networks in mind.
@@ -34,14 +35,14 @@ class DTNnode:
     """
     self.socketRecv.settimeout(timeout)
 
-  def bind(self, address: tuple(str, int)) -> None:
+  def bind(self, address: tuple[str, int]) -> None:
     """
     Bind receiving socket to the address
     """
     self.address = address
     self.socketRecv.bind(self.address)
 
-  def get_address(self, id: str) -> tuple(str, int):
+  def get_address(self, id: str) -> tuple[str, int]:
     """
     Get address corresponding to node id
     """
@@ -204,9 +205,16 @@ class DTNnode:
     """
     Send a bundle forward to the next hop
     """
-    dest = self.get_address(bundle.get_next_hop())
-    self.socketSend.sendto(str(bundle).encode(), dest)
+    self.send_to_space(bundle)
     print('Bundle forwarded to node:', bundle.get_next_hop())
+
+  def send_to_space(self, bundle: bundle) -> None:
+    """
+    Send a bundle simulating the delay associated to the distance
+    that must be traveled through space
+    """
+    dest = self.get_address(bundle.get_next_hop())
+    self.socketSend.sendto((str(bundle) + '###' + str(dest)).encode(), spaceAddress)
 
   def recv(self, buff_size: int, current_time: float, alarm_on : bool = False, timer : int = 0) -> int:
     """

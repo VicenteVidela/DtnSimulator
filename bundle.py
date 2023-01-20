@@ -6,7 +6,7 @@ class bundle:
   A class that describes a bundle to be sent in the DTN.
   """
 
-  def __init__(self, message: str, src: str, dest: str, size: str ='00000000',p: int =0, crit: bool =False, cust: bool =False, frag: bool =True, deadline: int =0) -> bundle:
+  def __init__(self, message: str, src: str, dest: str, size: str ='00000000',p: int =0, crit: bool =False, cust: bool =False, frag: bool =True, deadline: int =0) -> None:
     """
     A class that describes a bundle to be sent in the DTN.
 
