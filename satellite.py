@@ -36,10 +36,26 @@ satellite.settimeout(1)
 start_time = time.time()
 current_time = 0
 
+alarm_on = False
+send_queue_timer = 0
+
 # Main loop
 try:
   while True:
-    return_time = satellite.recv(1024, current_time)
-    current_time = time.time() - start_time    # For keeping track of how much time has passed
+    # Listen for messages
+    send_queue_timer = satellite.recv(1024, current_time, alarm_on=alarm_on, timer=send_queue_timer)
+
+    # For keeping track of how much time has passed
+    current_time = time.time() - start_time
+
+    # If it has to wait for the route to be available
+    if (send_queue_timer > 0 and not alarm_on):
+      alarm_on = True
+    # If timer expired, start sending
+    if (alarm_on and send_queue_timer==-1):
+      alarm_on = False
+      satellite.send_bundles_in_queue(current_time)
+
+
 except KeyboardInterrupt:
   print('Program finished.')

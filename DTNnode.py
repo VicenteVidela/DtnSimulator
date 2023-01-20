@@ -156,10 +156,21 @@ class DTNnode:
     # If a route was found, add it to queue
     if (updated_bundle.get_route() is not None):
       self.send_queue.append(updated_bundle)
-      self.send_first_in_queue(current_time)
+      # Start sending queue
+      return self.send_bundles_in_queue(current_time)
     else:
       #TODO Add to limbo
       pass
+
+  def send_bundles_in_queue(self, current_time: float) -> float:
+    delta_t = 0
+    # When delta_t==0, send was succesful
+    while (delta_t == 0):
+      delta_t = self.send_first_in_queue(current_time)
+      # If route is not yet available
+      if (delta_t > 0):
+        return delta_t
+    return 0
 
   def send_first_in_queue(self, current_time: float) -> float:
     """
@@ -182,7 +193,7 @@ class DTNnode:
     # Route not yet available, have to wait
     if (delta_time > 0):
       print('Route not yet available, have to wait', str(delta_time)+'s')
-      time.sleep(delta_time)
+      return delta_time
 
     # Passed all checks, delete it from the list and send
     bundle_to_send = self.send_queue.pop(0)
@@ -197,10 +208,15 @@ class DTNnode:
     self.socketSend.sendto(str(bundle).encode(), dest)
     print('Bundle forwarded to node:', bundle.get_next_hop())
 
-  def recv(self, buff_size: int, current_time: float) -> int:
+  def recv(self, buff_size: int, current_time: float, alarm_on : bool = False, timer : int = 0) -> int:
     """
     Receives a bundle Then prints if it's destination was this node,
     or forward it through the appropiate route
+
+    Return codes:
+    - 0: Arrived to destination correctly or was forwarded to the next hop.
+    - -1: Alarm expired, stop receiving and try to send bundles in queue.
+    - >0: No route available for bundle, have to wait.
     """
     # For counting how many seconds have passed since the call of the function
     start_time = time.time()
@@ -209,12 +225,19 @@ class DTNnode:
     # Main cycle of receiving
     while True:
       try:
-          recv_bundle, _ = self.socketRecv.recvfrom(buff_size)
-          break
+        # Before receiving, check every second if timer expired or not
+        # This only applies if alarm_on is True
+        if (alarm_on):
+          if (timer <= 0):
+            return -1
+          timer -= self.socketRecv.gettimeout()
+
+        recv_bundle, _ = self.socketRecv.recvfrom(buff_size)
+        break
       except TimeoutError:
-          print ("\033[A\033[A")
-          print('Node', self.id, 'waiting for message. Elapsed time:', str(round(time.time()-start_time)) + 's')
-          continue
+        print ("\033[A\033[A")
+        print('Node', self.id, 'waiting for message. Elapsed time:', str(round(time.time()-start_time)) + 's')
+        continue
 
     # Transform to bundle structure
     recv_bundle = bundle.to_bundle(recv_bundle.decode())
@@ -231,6 +254,4 @@ class DTNnode:
     current_time += (end_time - start_time)
 
     # If it is for other node, forward it
-    self.add_to_queue(recv_bundle, current_time)
-    return 1
-
+    return self.add_to_queue(recv_bundle, current_time)
