@@ -1,5 +1,6 @@
 import socket, time, json
 from bundle import bundle
+from graph import contact_graph
 from copy import deepcopy
 
 spaceAddress = ('127.0.0.1', 8080)
@@ -59,45 +60,13 @@ class DTNnode:
     # Since all is run on localhost for now, only the ports are unique per node
     return ('127.0.0.1', self.address_list[id])
 
-  def update_contact_plan(self, new_plan_directory: str, compute_routes: bool = False) -> None:
+  def create_route_list(self, contact_graph: contact_graph, addresses: dict) -> None:
     """
-    Update contact plan with new one and compute the route lists if necessary.
-    Contact plan directory is required.
+    Create route list based on a contact graph
     """
-    # Open file and read it
-    with open(new_plan_directory) as f:
-      # Check file extension
-      if (new_plan_directory.split('.')[-1] != 'txt'):
-        raise TypeError('File is not .txt')
-      contactsString = f.read()
-    f.close()
-
-    # Create contacts array and add valid contacts
-    contacts = []
-    for c in contactsString.splitlines():
-      if (c.startswith('address')):
-        _, node, address = c.split()
-        self.address_list[node] = int(address)
-      elif (len(c) > 0 and c[0] != '#'):
-        contacts.append(c)
-
-    # Update contact plan
-    self.contact_plan = contacts
-    # Create route list
-    if compute_routes:
-      self.route_list = self.create_route_list(contacts)
-      # TODO: Update other nodes
-
-  # TODO: Create routes based on contact plan
-  def create_route_list(self, plan, current_time):
-    # Create route list based on contact plan
-    # Iterate through the plan
-    for c in plan:
-      origin, receiver, start_time, end_time, rate, distance = c.split()
-      # We are interested only in the ones that start on this node
-      # and also any that has already ended are discarded
-      if (origin != self.id or current_time >= (end_time + distance)):
-        continue
+    self.route_list = {}
+    self.route_list['E'] = contact_graph.get_routes()
+    self.address_list = addresses
 
   def update_route_list(self, new_list_directory: str) -> None:
     """
@@ -110,7 +79,8 @@ class DTNnode:
       if (new_list_directory.split('.')[-1] != 'json'):
         raise TypeError('File is not .json')
       data = json.load(f)
-      self.route_list = data
+      self.address_list = data['addresses']
+      self.route_list = {k: v for k, v in data.items() if k !='addresses'}
     f.close()
 
   def is_candidate_route(self, bundle: bundle, route: dict, current_time: float) -> float:
@@ -124,25 +94,27 @@ class DTNnode:
     if (deadline <= current_time): return -1
 
     # 2. Bundle deadline is before it can reach destination
-    # Deadline <= Best Delivery Time (BDT
-    if (deadline <= current_time + route['distance']): return -1
+    # Deadline <= Best Delivery Time (BDT)
+    if (deadline <= current_time + route['total_time']): return -1
 
     # 3. Based on queue, check whether the route will be available when it reaches the front
     # Route End Time <= Earliest Transmission Opportunity (ETO)
-    queue_available_time = max(current_time, route['startTime'])
+    hop = bundle.next_hop
+    if (hop is None): hop = route['path'].split()[1]
+    queue_available_time = max(current_time, route['start_time'][hop])
     for b in self.send_queue[bundle.priority]:
-      queue_available_time = max(queue_available_time, b.route['startTime'])
-    if (route['endTime'] <= queue_available_time): return -1
+      queue_available_time = max(queue_available_time, b.route['start_time'][b.next_hop])
+    if (route['end_time'][hop] <= queue_available_time): return -1
 
     # 4. Based on queue, check if it can reach destination on time
     # Deadline <= Projected Arrival Time (PAT)
-    if (deadline <= queue_available_time + route['distance']): return -1
+    if (deadline <= queue_available_time + route['total_time']): return -1
 
     # 5. The bundle size is less than the route volume
-    if (bundle.get_size() > (int(route['rate']) * (int(route['endTime']) - int(route['startTime'])))): return -1
+    if (bundle.get_size() > (int(route['rate']) * (int(route['end_time'][hop]) - int(route['start_time'][hop])))): return -1
 
     # Passed all checks yay!
-    return queue_available_time + route['distance']
+    return queue_available_time + route['total_time']
 
   def select_best_route(self, route_list: list, pat_list: list) -> dict:
     """
@@ -161,14 +133,14 @@ class DTNnode:
       return route_list[min_pat_index[0]]
 
     # 2. Least number of hops
-    min_pat_routes_len = [len(route_list[i]['route']) for i in min_pat_index]
+    min_pat_routes_len = [len(route_list[i]['path']) for i in min_pat_index]
     min_hop = min(min_pat_routes_len)
     min_hop_index = [idx for idx, value in enumerate(min_pat_routes_len) if value == min_hop]
     if (len(min_hop_index) == 1):
       return route_list[min_hop_index[0]]
 
     # 3. The one that ends the last
-    end_time_last = [route_list[i]['endTime'] for i in min_hop_index]
+    end_time_last = [route_list[i]['end_time'] for i in min_hop_index]
     max_time_last = max(end_time_last)
     max_time_last_index = [idx for idx, value in enumerate(end_time_last) if value == max_time_last]
     return route_list[max_time_last_index[0]]
@@ -206,7 +178,7 @@ class DTNnode:
       if (len(candidate_routes) > 0):
         # If critical, send through all routes
         if bundle.critical:
-          candidate_routes.sort(key=lambda d: d['startTime'])
+          candidate_routes.sort(key=lambda d: d['start_time'])
           critical_list = []
           # Return a list with bundles that will go to all routes
           for r in candidate_routes:
@@ -218,19 +190,20 @@ class DTNnode:
         # Search best route and set it to the bundle
           best_route = self.select_best_route(candidate_routes, route_pats)
           bundle.set_route(best_route)
+          bundle.set_next_hop(best_route['path'][2])
       else:
         print('No possible route found, putting bundle in limbo.')
 
     else:
       # Check the route and get next hop
-      route_splitted = bundle.get_route()['route'].split()
+      route_splitted = bundle.get_route()['path'].split()
       try:
         i = route_splitted.index(self.id)
       except ValueError:
         print('Current node not in route, something happened. Discarding bundle')
         return None
       # Set the next hop for the bundle
-      bundle.set_next_hop(route_splitted[i-1])
+      bundle.set_next_hop(route_splitted[i+1])
 
     return bundle
 
@@ -292,7 +265,7 @@ class DTNnode:
       print("Bundle deadline already passed, discarding.")
       return -1
 
-    route_start_time = bundle_to_send.get_route()['startTime']
+    route_start_time = bundle_to_send.get_route()['start_time'][bundle_to_send.get_next_hop()]
     delta_time = route_start_time-current_time
     # Route not yet available, have to wait
     if (delta_time > 0):

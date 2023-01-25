@@ -50,7 +50,7 @@ try:
       bundle_recv, destination, next_hop_id = bundle_recv.decode().split('###')
       bundle_recv = bundle.to_bundle(bundle_recv)
       # Get the distance between the nodes
-      distance = bundle_recv.route['distance']
+      distance = bundle_recv.route['distance'][next_hop_id]
       # Get the destination address
       destination_split = destination.split(',')
       destination = (destination_split[0][2:-1], int(destination_split[1][1:-1]))

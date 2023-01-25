@@ -126,7 +126,6 @@ class bundle:
     """
     # A route dict is passed
     self.route = route
-    self.set_next_hop(route['nextHop'])
 
   def set_next_hop(self, hop: str) -> None:
     """

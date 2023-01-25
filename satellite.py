@@ -1,31 +1,35 @@
 import sys, time
 from DTNnode import DTNnode
+from routes import routesA_E, addresses
 
 # python3 satellite.py A contactPlans/plan1.txt routes/routesA.json
 
 # Get variables from console
-try:
-  _, id, contact_plan, route_list = sys.argv
-except ValueError:
-  print('ValueError: 3 values are needed from console: id, contact_plan_file, route_list_file')
+
+args = sys.argv
+route_list = None
+
+if len(args)>=2:
+  id = args[1]
+  if len(args)==3:
+    route_list = args[2]
+else:
+  print('ValueError: 1 value needed from console, second is optional: id, route_list_file')
   exit()
 
 # Create the node
 satellite = DTNnode(id, 3)
 
-# Add contact plan
-try:
-  satellite.update_contact_plan(contact_plan)
-except (FileNotFoundError,IsADirectoryError, TypeError) as e:
-  print(e)
-  exit()
-
-# Add routes
-try:
-  satellite.update_route_list(route_list)
-except (FileNotFoundError,IsADirectoryError, TypeError) as e:
-  print(e)
-  exit()
+if route_list is None:
+  g = routesA_E().g
+  satellite.create_route_list(g, addresses)
+else:
+  # Add routes
+  try:
+    satellite.update_route_list(route_list)
+  except (FileNotFoundError,IsADirectoryError, TypeError) as e:
+    print(e)
+    exit()
 
 # Get the address of it and bind it
 address = satellite.get_address(satellite.id)

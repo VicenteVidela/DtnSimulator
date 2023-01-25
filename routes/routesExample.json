@@ -1,0 +1,19 @@
+{
+  "addresses": {
+    "A": 8881,
+    "B": 8882,
+    "C": 8883,
+    "D": 8884,
+    "E": 8885
+  },
+  "A": [
+    {
+      "path": "G A",
+      "start_time": {"A": 0},
+      "end_time": {"A": 100},
+      "total_time": 10,
+      "distance": {"A": 1},
+      "rate": 100
+    }
+  ]
+}

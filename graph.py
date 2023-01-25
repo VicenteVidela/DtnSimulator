@@ -88,7 +88,7 @@ class contact_graph:
       # The route will be a dictionary of each contact with it's time window
       for node_idx in p[1:-1]:
         # Add the distance between nodes
-        distance[self.graph.vs[node_idx]['label']] = self.graph.vs[node_idx]['distance']
+        distance[self.graph.vs[node_idx]['label'].split('-')[1]] = self.graph.vs[node_idx]['distance']
         # The rate is the minimum rate of all the contacts
         rate = min(rate, self.graph.vs[node_idx]['rate'] * (self.graph.vs[node_idx]['end'] - self.graph.vs[node_idx]['start']))
         # Add to route dictionary
@@ -127,12 +127,13 @@ class contact_graph:
         start_time[node2] = dic['route'][contact][0]
         end_time[node2] = dic['route'][contact][1]
         total_time = max(total_time, start_time[node2])
-        total_time += dic['distance'][contact]
+        total_time += dic['distance'][node2]
       path += node2
       route['path'] = path
       route['start_time'] = start_time
       route['end_time'] = end_time
       route['total_time'] = total_time
+      route['distance'] = dic['distance']
       route['rate'] = dic['rate']
       routes.append(route)
 
