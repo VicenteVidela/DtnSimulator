@@ -6,14 +6,14 @@ class graph:
   A class for representing a simple graph, with a time associated to it
   """
 
-  def __init__(self, t : float, n_vertices : int, edges : list = None, layout : str = 'rt') -> None:
+  def __init__(self, t : int, n_vertices : int, edges : list = None, layout : str = 'rt') -> None:
     """
     A class for representing a time evolving graph of satellite
     nodes, as they change over time. This is only for one instance of time
 
     Parameters
     ----------
-    t : float
+    t : int
       To what time this graph corresponds
     n_vertices : int
       Number of vertices of the graphs, which is the number of satellites
@@ -50,11 +50,12 @@ class time_evolving_graph:
   A class for representing a time evolving graph of satellite
   nodes, as they change over time. This is the complete list of graphs
   """
-  def __init__(self, graphs : list) -> None:
+  def __init__(self, graphs : list, end_time : int) -> None:
     self.graphs = graphs
     self.T_list = []
     for g in self.graphs:
       self.T_list.append(g.get_t())
+    self.T_list.append(end_time)
 
   def plot(self) -> None:
     n = len(self.graphs)
@@ -65,16 +66,42 @@ class time_evolving_graph:
       ax[i].set_title('t=' + str(i))
     plt.show()
 
+  def to_contact_graph(self) -> None:
+    vertices = self.graphs[0].graph.vs
+    contact_nodes = {}
+    for v in range(len(vertices)):
+      contacts = {}
+      for g in self.graphs:
+        contacts[g.t] = g.graph.get_all_simple_paths(v, cutoff=1)
+      nodes = {}
+      for t in contacts:
+        for c in contacts[t]:
+          to = c[-1]
+          now_index = self.T_list.index(t)
+          try:
+            t_prev = nodes[to]['t_final']
+            prev_index = self.T_list.index(t_prev)
+            if (now_index==prev_index):
+              nodes[to]['t_final'] = self.T_list[now_index+1]
+            else:
+              raise KeyError
+          except KeyError:
+            nodes[to] = {'t_ini': t, 't_final': self.T_list[now_index+1]}
+      contact_nodes[v] = nodes
+
+    print(contact_nodes)
+
+
 # Example
-# n=3
-# edges = [[0,1]]
-# a = graph(0, n, edges)
+n=3
+edges = [[0,1]]
+a = graph(0, n, edges)
 
-# edges = [[0,1], [1,2]]
-# b = graph(0, n, edges)
+edges = [[0,1], [1,2]]
+b = graph(1, n, edges)
 
-# edges = [[0,1], [1,2], [0,2]]
-# c = graph(0, n, edges)
+edges = [[0,1], [1,2], [0,2]]
+c = graph(2, n, edges)
 
-# gr = time_evolving_graph([a,b,c])
-# gr.plot()
+gr = time_evolving_graph([a,b,c], 3)
+gr.to_contact_graph()
