@@ -1,6 +1,6 @@
 import sys, time
 from DTNnode import DTNnode
-from routes import routesA_E, addresses
+from routes import routesA, addresses
 
 # python3 satellite.py A contactPlans/plan1.txt routes/routesA.json
 
@@ -21,8 +21,9 @@ else:
 satellite = DTNnode(id, 3)
 
 if route_list is None:
-  g = routesA_E().g
-  satellite.create_route_list(g, addresses)
+  routes = routesA()
+  g_E = routes.routes_E()
+  satellite.create_route_list(g_E, addresses, 0)
 else:
   # Add routes
   try:

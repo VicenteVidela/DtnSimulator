@@ -32,6 +32,7 @@ class DTNnode:
     self.contact_plan = None  # Contact plan
     self.address_list = {}    # Dictionary of the different addresses of the other nodes
     self.route_list = None    # List of route lists for the other nodes
+    self.limbo_list = []      # List of bundles thtat didn't have a route
 
     self.n_priorities = n_priorities
     # Dictionary for storing all the messages that have to be sent when available, stored by priority
@@ -60,13 +61,14 @@ class DTNnode:
     # Since all is run on localhost for now, only the ports are unique per node
     return ('127.0.0.1', self.address_list[id])
 
-  def create_route_list(self, contact_graph: contact_graph, addresses: dict) -> None:
+  def create_route_list(self, contact_graph: contact_graph, addresses: dict, current_time: int) -> None:
     """
     Create route list based on a contact graph
     """
     self.route_list = {}
     self.route_list['E'] = contact_graph.get_routes()
     self.address_list = addresses
+    self.limbo_to_queue(current_time)
 
   def update_route_list(self, new_list_directory: str) -> None:
     """
@@ -165,8 +167,7 @@ class DTNnode:
         # Routes must pass certain checks for them to be added
         # 1. Route expired
         # 2. Bundle deadline is before it can reach destination
-        # 3. Based on queue, check whether the route will be available when it reaches the front
-        # 4. Based on queue, check if it can reach destination on time
+        # 3. Based on queue, check whecurrent_timeit can reach destination on time
         # 5. The bundle size is less than the route volume
         pat = self.is_candidate_route(bundle, r, current_time)
         if (pat > -1):
@@ -235,10 +236,21 @@ class DTNnode:
       # Start sending queue
       return self.send_bundles_in_queue(current_time)
     else:
-      #TODO Add to limbo
-      pass
+      # Add to limbo list
+      self.limbo_list.append(bundle)
+
+  def limbo_to_queue(self, current_time: float) -> None:
+    """
+    Go through limbo list and check if bundles can be added to queue
+    """
+    for b in self.limbo_list:
+      self.add_to_queue(b, current_time)
+
 
   def send_bundles_in_queue(self, current_time: float) -> float:
+    """
+    Go through the send queues for all priorities and start sending
+    """
     for p in range(self.n_priorities, 0, -1):
       delta_t = 0
       # When delta_t==0, send was succesful

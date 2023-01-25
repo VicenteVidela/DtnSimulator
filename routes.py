@@ -5,8 +5,11 @@ from graph import contact_graph
 # D-E:6, D-E:7, D-E:8
 # E-E: 9
 
-class routesA_E:
+class routesA:
   def __init__(self) -> None:
+    pass
+
+  def routes_E(self) -> contact_graph:
     n_vertices = 10
     start_time = 0
     end_time = 60
@@ -39,6 +42,8 @@ class routesA_E:
 
     # Gets all routes from A to E in this plan
     # ordered by number of hops
+
+    return self.g
 
 addresses = {
   "A": 8881,
