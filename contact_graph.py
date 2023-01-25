@@ -45,7 +45,6 @@ class contact_graph:
   def add_attributes(self, attr_name : str, attr : any) -> None:
     """
     Add a new attribute to the graph vertices
-    str | int | float | list
     """
     self.graph.vs[attr_name] = attr
 
