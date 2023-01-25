@@ -23,7 +23,7 @@ satellite = DTNnode(id, 3)
 if route_list is None:
   routes = routesA()
   g_E = routes.routes_E()
-  satellite.create_route_list(g_E, addresses, 0)
+  satellite.create_route_list(g_E, addresses, 0, 3)
 else:
   # Add routes
   try:

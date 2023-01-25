@@ -61,12 +61,12 @@ class DTNnode:
     # Since all is run on localhost for now, only the ports are unique per node
     return ('127.0.0.1', self.address_list[id])
 
-  def create_route_list(self, contact_graph: contact_graph, addresses: dict, current_time: int) -> None:
+  def create_route_list(self, contact_graph: contact_graph, addresses: dict, current_time: int, K: int = 0) -> None:
     """
     Create route list based on a contact graph
     """
     self.route_list = {}
-    self.route_list['E'] = contact_graph.get_routes()
+    self.route_list['E'] = contact_graph.get_routes(K)
     self.address_list = addresses
     self.limbo_to_queue(current_time)
 
@@ -101,19 +101,20 @@ class DTNnode:
 
     # 3. Based on queue, check whether the route will be available when it reaches the front
     # Route End Time <= Earliest Transmission Opportunity (ETO)
-    hop = bundle.next_hop
-    if (hop is None): hop = route['path'].split()[1]
-    queue_available_time = max(current_time, route['start_time'][hop])
-    for b in self.send_queue[bundle.priority]:
-      queue_available_time = max(queue_available_time, b.route['start_time'][b.next_hop])
-    if (route['end_time'][hop] <= queue_available_time): return -1
+    queue_available_time = 0
+    for hops in route['path'].split()[1:]:
+      queue_available_time = max(queue_available_time, current_time, route['start_time'][hops])
+      for b in self.send_queue[bundle.priority]:
+        queue_available_time = max(queue_available_time, b.route['start_time'][b.next_hop])
+      if (route['end_time'][hops] <= queue_available_time): return -1
 
     # 4. Based on queue, check if it can reach destination on time
     # Deadline <= Projected Arrival Time (PAT)
     if (deadline <= queue_available_time + route['total_time']): return -1
 
     # 5. The bundle size is less than the route volume
-    if (bundle.get_size() > (int(route['rate']) * (int(route['end_time'][hop]) - int(route['start_time'][hop])))): return -1
+    for hops in route['path'].split()[1:]:
+      if (bundle.get_size() > (int(route['rate']) * (int(route['end_time'][hops]) - int(route['start_time'][hops])))): return -1
 
     # Passed all checks yay!
     return queue_available_time + route['total_time']
@@ -238,6 +239,7 @@ class DTNnode:
     else:
       # Add to limbo list
       self.limbo_list.append(bundle)
+      return 0
 
   def limbo_to_queue(self, current_time: float) -> None:
     """
@@ -272,6 +274,7 @@ class DTNnode:
 
     # Retrieve bundle from list
     bundle_to_send = self.send_queue[priority][0]
+    print(bundle_to_send)
     # Check deadline and discard it if it passed
     if (0 < bundle_to_send.get_deadline() <= current_time):
       print("Bundle deadline already passed, discarding.")
