@@ -82,13 +82,13 @@ class contact_graph:
 
     # Go through all paths and create the routes from it
     for p in paths:
-      distance = 0
+      distance = {}
       rate = 10000
       route = {}
       # The route will be a dictionary of each contact with it's time window
       for node_idx in p[1:-1]:
-        # Add to the total distance
-        distance += self.graph.vs[node_idx]['distance']
+        # Add the distance between nodes
+        distance[self.graph.vs[node_idx]['label']] = self.graph.vs[node_idx]['distance']
         # The rate is the minimum rate of all the contacts
         rate = min(rate, self.graph.vs[node_idx]['rate'] * (self.graph.vs[node_idx]['end'] - self.graph.vs[node_idx]['start']))
         # Add to route dictionary
@@ -100,5 +100,42 @@ class contact_graph:
 
     return routes
 
+  def get_routes(self, K: int = 0) -> list:
+    """
+    After getting all routes, get only the first K ones
+    and return them with the correct format for the sattelites
+    K=0 means all
+    """
+
+    # Get all routes
+    all_routes = self.get_all_routes()
+
+    if K==0: K=len(all_routes)
+
+    routes = []
+    # Go through the list of routes
+    for k in range(K):
+      route = {}
+      dic = all_routes[k]
+      total_time = 0
+      path = ''
+      start_time = {}
+      end_time = {}
+      for contact in dic['route']:
+        node1, node2 = contact.split('-')
+        path += node1 + ' '
+        start_time[node2] = dic['route'][contact][0]
+        end_time[node2] = dic['route'][contact][1]
+        total_time = max(total_time, start_time[node2])
+        total_time += dic['distance'][contact]
+      path += node2
+      route['path'] = path
+      route['start_time'] = start_time
+      route['end_time'] = end_time
+      route['total_time'] = total_time
+      route['rate'] = dic['rate']
+      routes.append(route)
+
+    return routes
 
 

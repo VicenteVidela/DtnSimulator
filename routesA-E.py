@@ -37,4 +37,6 @@ g.add_attributes('end',   [end_time,  60, 60, 20, 60, 30, 10, 40, 60, end_time])
 
 # Gets all routes from A to E in this plan
 # ordered by number of hops
-all_routes = g.get_all_routes()
+routes = g.get_routes()
+
+print(routes)
