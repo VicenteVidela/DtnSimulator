@@ -1,6 +1,6 @@
 import socket, time, json
 from bundle import bundle
-from graph import contact_graph
+from contact_graph import contact_graph
 from copy import deepcopy
 
 spaceAddress = ('127.0.0.1', 8080)

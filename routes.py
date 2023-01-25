@@ -1,15 +1,14 @@
-from graph import contact_graph
-
-# A-A:0, A-B:1, A-C:2, A-E:3,
-# B-C:4, C-D:5
-# D-E:6, D-E:7, D-E:8
-# E-E: 9
+from contact_graph import contact_graph
 
 class routesA:
   def __init__(self) -> None:
     pass
 
   def routes_E(self) -> contact_graph:
+    # A-A:0, A-B:1, A-C:2, A-E:3,
+    # B-C:4, C-D:5
+    # D-E:6, D-E:7, D-E:8
+    # E-E: 9
     n_vertices = 10
     start_time = 0
     end_time = 60
