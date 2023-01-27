@@ -1,10 +1,12 @@
 import socket, time, json
 from bundle import bundle
-from contact_graph import contact_graph
 from time_evolving_graph import time_evolving_graph
 from copy import deepcopy
 
-spaceAddress = ('127.0.0.1', 8080)
+spaceAddress_file = '/home/vish/Desktop/Redes Satelitales/DtnSimulator/time_graphs/space_address.txt'
+with open(spaceAddress_file) as f:
+  a = f.read().split()
+  spaceAddress = (a[0], int(a[1]))
 
 class DTNnode:
   """

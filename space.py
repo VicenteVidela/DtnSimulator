@@ -13,6 +13,11 @@ try:
 except (IndexError, ValueError):
   loss_probability = 0
 
+spaceAddress_file = '/home/vish/Desktop/Redes Satelitales/DtnSimulator/time_graphs/space_address.txt'
+with open(spaceAddress_file) as f:
+  a = f.read().split()
+  spaceAddress = (a[0], int(a[1]))
+
 class travelling_bundle:
   """
   Class that simulates a bundle travelling through space.
@@ -39,7 +44,6 @@ class travelling_bundle:
 # The timeout is used for updating the bundle timers, one second at a time
 spaceSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 spaceSocket.settimeout(1)
-spaceAddress = ('127.0.0.1', 8080)
 spaceSocket.bind(spaceAddress)
 
 # List of bundles that are still waiting
