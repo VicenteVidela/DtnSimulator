@@ -4,7 +4,13 @@ import socket, time, sys, random
 # Get variables from console
 try:
   loss_probability = float(sys.argv[1]) #Between 0 and 1
-except IndexError:
+  loss_causes = [
+    'It hit an asteroid!',
+    'A cosmic laser got in the way!!',
+    'Space swalloed it, nobody know where it went...',
+    'Someone though this was important and stole it.'
+  ]
+except (IndexError, ValueError):
   loss_probability = 0
 
 class travelling_bundle:
@@ -58,7 +64,7 @@ try:
       # Create a new instance that will wait and add it to the list
       new_bundle = travelling_bundle(bundle_recv, distance, destination, next_hop_id)
       bundle_list.append(new_bundle)
-      print('Bundle travelling through space to the next hop, node', next_hop_id, '\n')
+      print('Bundle travelling through space to the next hop, node {hop_id}. Has to travel {dist} light-seconds\n'.format(hop_id=next_hop_id, dist=distance))
     except TimeoutError:
       # Every second, see if bundles must be sent
       for b in bundle_list:
@@ -73,7 +79,7 @@ try:
           n = random.random()
           if (n < loss_probability):
             bundle_list.remove(b)
-            print('Bundle lost! :c \n')
+            print('Bundle lost. ' + random.choice(loss_causes) + ' \n')
 
 
       print ("\033[A\033[A")

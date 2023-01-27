@@ -1,6 +1,7 @@
 import socket, time, json
 from bundle import bundle
 from contact_graph import contact_graph
+from time_evolving_graph import time_evolving_graph
 from copy import deepcopy
 
 spaceAddress = ('127.0.0.1', 8080)
@@ -31,8 +32,9 @@ class DTNnode:
     self.address = None       # Satellite node
     self.contact_plan = None  # Contact plan
     self.address_list = {}    # Dictionary of the different addresses of the other nodes
-    self.route_list = None    # List of route lists for the other nodes
+    self.route_list = {}      # List of route lists for the other nodes
     self.limbo_list = []      # List of bundles thtat didn't have a route
+    self.time_graph = None    # Stores the time graph
 
     self.n_priorities = n_priorities
     # Dictionary for storing all the messages that have to be sent when available, stored by priority
@@ -59,21 +61,38 @@ class DTNnode:
     Get address corresponding to node id
     """
     # Since all is run on localhost for now, only the ports are unique per node
-    return ('127.0.0.1', self.address_list[id])
+    return self.address_list[id]
 
-  def create_route_list(self, contact_graph: contact_graph, addresses: dict, current_time: int, K: int = 0) -> None:
+  def assing_time_graph(self, file_path: str) -> None:
+    """
+    Set a new time evolving graph for the node
+    with all its properties
+    """
+    with open(file_path) as f:
+      # Check file extension
+      if (file_path.split('.')[-1] != 'json'):
+        raise TypeError('File is not .json')
+      # Read data and assign it to the satellite
+      data = json.load(f)
+      self.time_graph = time_evolving_graph(data['labels'], data['edges'], data['start_time'], data['end_time'])
+      for address in data['addresses']:
+        a = data['addresses'][address]
+        self.address_list[address] = tuple(a)
+    f.close()
+
+  def create_route_list(self, destination: str, current_time: int, K: int = 0, limbo: bool = False) -> None:
     """
     Create route list based on a contact graph
     """
-    self.route_list = {}
-    self.route_list['E'] = contact_graph.get_routes(K)
-    self.address_list = addresses
-    self.limbo_to_queue(current_time)
+    g = self.time_graph.to_contact_graph(self.id, destination)
+    self.route_list[destination] = g.get_routes(K)
+    # When contact plan changes, check if now limbo can send
+    if (limbo): self.limbo_to_queue(current_time)
 
   def update_route_list(self, new_list_directory: str) -> None:
     """
     Update route list with a new one.
-    Route list directory is required.
+    Route list file path is required.
     """
     # Open file and read it
     with open(new_list_directory) as f:
@@ -274,7 +293,6 @@ class DTNnode:
 
     # Retrieve bundle from list
     bundle_to_send = self.send_queue[priority][0]
-    print(bundle_to_send)
     # Check deadline and discard it if it passed
     if (0 < bundle_to_send.get_deadline() <= current_time):
       print("Bundle deadline already passed, discarding.")

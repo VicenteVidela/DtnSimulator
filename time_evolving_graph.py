@@ -27,8 +27,8 @@ class time_evolving_graph:
     layour : str
       Layout algorithm to use for drawing the graph. Only used if graph is drawn
     """
-    self.labels = labels              # Label for each node number
-    self.n_vertices = len(labels)     # Number of vertices of the graph
+    self.labels = labels                 # Label for each node number
+    self.n_vertices = len(labels)        # Number of vertices of the graph
     self.graph = ig.Graph(n=self.n_vertices, edges=[d['contact'] for d in edges], directed=True)   # The graph itself is created
     self.graph.es['contact']=[d['contact'] for d in edges]
     self.graph.es['start_time'] = [d['start_time'] for d in edges]
@@ -47,16 +47,18 @@ class time_evolving_graph:
     """
     fig, ax = plt.subplots(figsize=(7, 7))
     ig.plot(self.graph, target=ax, layout=self.layout, edge_curved=curved_edges,
-      edge_label=['[{start},{end}]'.format(start=d['start_time'], end=d['end_time']) for d in edges],
-      vertex_label=self.labels.values())
+      edge_label=['[{start},{end}]'.format(start=d['start_time'], end=d['end_time']) for d in self.graph.es],
+      vertex_label=self.labels.keys())
     plt.show()
 
-  def to_contact_graph(self, origin: int, destination: int) -> contact_graph:
+  def to_contact_graph(self, origin_node: str, destination_node: str) -> contact_graph:
     """
     Transforms this graph into a contact graph from the desired origin to destination
     """
-    if (origin == destination):
+    if (origin_node == destination_node):
       raise ValueError("Origin same as destination")
+    origin = self.labels[origin_node]
+    destination = self.labels[destination_node]
     # Gets all paths from origin node to destination
     paths = self.graph.get_all_simple_paths(origin, destination)
     if (not paths):
@@ -83,6 +85,8 @@ class time_evolving_graph:
 
     ## First, the vertices for the contact graph are calculated
 
+    label_list = list(self.labels.keys())
+
     # Start the variables for the contact graph,
     # with the values for the origin node
     n_vertices = 0
@@ -90,7 +94,7 @@ class time_evolving_graph:
     start_times = [self.start_time]
     end_times = [self.end_time]
     distances = [0]
-    labels = [self.labels[origin] + '-' + self.labels[origin]]
+    labels = [origin_node + '-' + origin_node]
     rates = [100000]  # Big number for rate for first contact, in theory is infinite from A to A
     # Go through all nodes
     for node in contacts:
@@ -102,7 +106,7 @@ class time_evolving_graph:
         start_times.append(c['start_time'])     # Add the properties
         end_times.append(c['end_time'])
         distances.append(c['distance'])
-        labels.append(self.labels[contact[0]] + '-' + self.labels[contact[1]])
+        labels.append(str(label_list[contact[0]]) + '-' + str(label_list[contact[1]]))
         rates.append(c['rate'])
     # In the end, add the final contact destination-destination
     n_vertices += 1
@@ -110,15 +114,15 @@ class time_evolving_graph:
     start_times.append(self.start_time)
     end_times.append(self.end_time)
     distances.append(0)
-    labels.append(self.labels[destination] + '-' + self.labels[destination])
+    labels.append(destination_node + '-' + destination_node)
     rates.append(100000)
 
     ## Next, we get the edges connecting each vertex
     edges = []
     for c in contact_nodes:
-      destination_node = contact_nodes[c][1]
+      dest_node = contact_nodes[c][1]
       # Check all other vertices that should be connected to this contact
-      connections = [k for k,v in contact_nodes.items() if v[0]==destination_node]
+      connections = [k for k,v in contact_nodes.items() if v[0]==dest_node]
       for next_node in connections:
         if c!=next_node:
           edges.append([c, next_node])
@@ -137,25 +141,25 @@ class time_evolving_graph:
     return g
 
 
-## Example
-# Nodes
-labels = {0: 'A', 1: 'B', 2: 'C'}
-# Connections
-edges = [
-  {'contact': [0,1], 'start_time': 0, 'end_time': 1, 'distance': 1, 'rate': 2},
-  {'contact': [0,1], 'start_time': 2, 'end_time': 3, 'distance': 2, 'rate': 3},
-  {'contact': [1,2], 'start_time': 1, 'end_time': 3, 'distance': 1, 'rate': 1},
-  {'contact': [0,2], 'start_time': 2, 'end_time': 3, 'distance': 1, 'rate': 1},
-  {'contact': [2,0], 'start_time': 0, 'end_time': 3, 'distance': 1, 'rate': 2},
-]
+# ## Example
+# # Nodes
+# labels = {"A": 0, "B": 1, "C": 2}
+# # Connections
+# edges = [
+#   {'contact': [0,1], 'start_time': 0, 'end_time': 1, 'distance': 1, 'rate': 2},
+#   {'contact': [0,1], 'start_time': 2, 'end_time': 3, 'distance': 2, 'rate': 3},
+#   {'contact': [1,2], 'start_time': 1, 'end_time': 3, 'distance': 1, 'rate': 1},
+#   {'contact': [0,2], 'start_time': 2, 'end_time': 3, 'distance': 1, 'rate': 1},
+#   {'contact': [2,0], 'start_time': 0, 'end_time': 3, 'distance': 1, 'rate': 2},
+# ]
 
-# Create time graph
-a = time_evolving_graph(labels, edges, 0, 3)
-# Plot it
-a.plot(curved_edges=[False, True, False, False, True])
+# # Create time graph
+# a = time_evolving_graph(labels, edges, 0, 3)
+# # Plot it
+# a.plot(curved_edges=[False, True, False, False, True])
 
-# Convert to contact graph
-g = a.to_contact_graph(2,0)
-# Get the routes and plot the graph
-print(g.get_routes())
-g.plot()
+# # Convert to contact graph
+# g = a.to_contact_graph('A','C')
+# # Get the routes and plot the graph
+# print(g.get_routes())
+# g.plot()

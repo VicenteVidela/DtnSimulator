@@ -1,0 +1,21 @@
+{
+  "labels": {
+    "A": 0, "B": 1, "C": 2
+  },
+  "addresses": {
+    "A": ["127.0.0.1", 8880],
+    "B": ["127.0.0.1", 8881],
+    "C": ["127.0.0.1", 8882]
+  },
+
+  "edges":[
+    {"contact": [0,1], "start_time":  0, "end_time": 20, "distance":  1, "rate": 20},
+    {"contact": [0,1], "start_time": 30, "end_time": 60, "distance":  2, "rate": 30},
+    {"contact": [1,2], "start_time":  0, "end_time": 20, "distance":  1, "rate": 10},
+    {"contact": [0,2], "start_time": 20, "end_time": 60, "distance": 10, "rate": 10},
+    {"contact": [2,0], "start_time": 10, "end_time": 60, "distance": 10, "rate": 20}
+  ],
+
+  "start_time": 0,
+  "end_time": 60
+}
