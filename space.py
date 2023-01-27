@@ -1,5 +1,5 @@
 from bundle import bundle
-import socket, time, sys, random
+import socket, time, sys, random, os
 
 # Get variables from console
 try:
@@ -13,7 +13,8 @@ try:
 except (IndexError, ValueError):
   loss_probability = 0
 
-spaceAddress_file = '/home/vish/Desktop/Redes Satelitales/DtnSimulator/time_graphs/space_address.txt'
+dir_path = os.path.dirname(os.path.realpath(__file__))
+spaceAddress_file = dir_path + '/time_graphs/space_address.txt'
 with open(spaceAddress_file) as f:
   a = f.read().split()
   spaceAddress = (a[0], int(a[1]))

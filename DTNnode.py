@@ -1,9 +1,10 @@
-import socket, time, json
+import socket, time, json, os
 from bundle import bundle
 from time_evolving_graph import time_evolving_graph
 from copy import deepcopy
 
-spaceAddress_file = '/home/vish/Desktop/Redes Satelitales/DtnSimulator/time_graphs/space_address.txt'
+dir_path = os.path.dirname(os.path.realpath(__file__))
+spaceAddress_file = dir_path + '/time_graphs/space_address.txt'
 with open(spaceAddress_file) as f:
   a = f.read().split()
   spaceAddress = (a[0], int(a[1]))
