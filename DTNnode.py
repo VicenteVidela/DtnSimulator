@@ -42,6 +42,9 @@ class DTNnode:
     for p in range(n_priorities, 0, -1):
       self.send_queue[p] = []
 
+    # For counting how many seconds have passed since the creation of the node
+    self.start_time = time.time()
+
 
   def settimeout(self, timeout: float) -> None:
     """
@@ -336,8 +339,6 @@ class DTNnode:
     - -1: Alarm expired, stop receiving and try to send bundles in queue.
     - >0: No route available for bundle, have to wait.
     """
-    # For counting how many seconds have passed since the call of the function
-    start_time = time.time()
 
     print('Node', self.id, 'waiting for message. Elapsed time: 0s')
     # Main cycle of receiving
@@ -354,7 +355,7 @@ class DTNnode:
         break
       except TimeoutError:
         print ("\033[A\033[A")
-        print('Node', self.id, 'waiting for message. Elapsed time:', str(round(time.time()-start_time)) + 's')
+        print('Node', self.id, 'waiting for message. Elapsed time:', str(round(time.time()-self.start_time)) + 's')
         continue
 
     # Transform to bundle structure
@@ -369,7 +370,7 @@ class DTNnode:
     # Calculate how many seconds have passed since the start of the function
     # specially because of the while True loop
     end_time = time.time()
-    current_time += (end_time - start_time)
+    current_time += (end_time - self.start_time)
 
     # If it is for other node, forward it
     return self.add_to_queue(recv_bundle, current_time)
