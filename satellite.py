@@ -1,4 +1,4 @@
-import sys, time
+import sys, time, os
 from DTNnode import DTNnode
 
 # For example: python3 satellite.py A 3 time_graphs/graph1.json
@@ -17,6 +17,7 @@ else:
 satellite = DTNnode(id, priorities_amount)
 
 # Create and assign the time graph from the file
+time_graph = os.path.dirname(os.path.realpath(__file__)) + '/time_graphs/' + time_graph
 satellite.assign_time_graph(time_graph)
 
 # Get the address of it and bind it

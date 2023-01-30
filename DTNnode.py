@@ -162,16 +162,17 @@ class DTNnode:
       return route_list[min_pat_index[0]]
 
     # 2. Least number of hops
-    min_pat_routes_len = [len(route_list[i]['path']) for i in min_pat_index]
+    route_list = [route_list[i] for i in min_pat_index]
+    min_pat_routes_len = [len(r['path']) for r in route_list]
     min_hop = min(min_pat_routes_len)
     min_hop_index = [idx for idx, value in enumerate(min_pat_routes_len) if value == min_hop]
     if (len(min_hop_index) == 1):
       return route_list[min_hop_index[0]]
 
     # 3. The one that ends the last
+    route_list = [route_list[i] for i in min_hop_index]
     end_time_last = []
-    end_time_last.append(route_list[i]['end_time'].values() for i in min_hop_index)
-    print(end_time_last)
+    end_time_last.append(r['end_time'].values() for r in route_list)
     max_time_last = max(end_time_last)
     max_time_last_index = [idx for idx, value in enumerate(end_time_last) if value == max_time_last]
     return route_list[max_time_last_index[0]]
