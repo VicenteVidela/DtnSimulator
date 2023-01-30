@@ -69,7 +69,7 @@ class DTNnode:
     # Since all is run on localhost for now, only the ports are unique per node
     return self.address_list[id]
 
-  def assing_time_graph(self, file_path: str) -> None:
+  def assign_time_graph(self, file_path: str) -> None:
     """
     Set a new time evolving graph for the node
     with all its properties
@@ -118,11 +118,12 @@ class DTNnode:
 
     # 1. Route expired
     deadline = bundle.get_deadline()
-    if (deadline <= current_time): return -1
+    if (deadline != -1):
+      if (deadline <= current_time): return -1
 
-    # 2. Bundle deadline is before it can reach destination
-    # Deadline <= Best Delivery Time (BDT)
-    if (deadline <= current_time + route['total_time']): return -1
+      # 2. Bundle deadline is before it can reach destination
+      # Deadline <= Best Delivery Time (BDT)
+      if (deadline <= current_time + route['total_time']): return -1
 
     # 3. Based on queue, check whether the route will be available when it reaches the front
     # Route End Time <= Earliest Transmission Opportunity (ETO)
@@ -135,7 +136,7 @@ class DTNnode:
 
     # 4. Based on queue, check if it can reach destination on time
     # Deadline <= Projected Arrival Time (PAT)
-    if (deadline <= queue_available_time + route['total_time']): return -1
+    if (deadline != -1 and deadline <= queue_available_time + route['total_time']): return -1
 
     # 5. The bundle size is less than the route volume
     for hops in route['path'].split()[1:]:
@@ -168,7 +169,9 @@ class DTNnode:
       return route_list[min_hop_index[0]]
 
     # 3. The one that ends the last
-    end_time_last = [route_list[i]['end_time'] for i in min_hop_index]
+    end_time_last = []
+    end_time_last.append(route_list[i]['end_time'].values() for i in min_hop_index)
+    print(end_time_last)
     max_time_last = max(end_time_last)
     max_time_last_index = [idx for idx, value in enumerate(end_time_last) if value == max_time_last]
     return route_list[max_time_last_index[0]]
@@ -239,7 +242,8 @@ class DTNnode:
     Add a bundle to send queue of the node
     """
     # If deadline already passed, discard it
-    if (0 < bundle.get_deadline() <= current_time):
+    deadline = bundle.get_deadline()
+    if (deadline != -1 and deadline <= current_time):
       print("Bundle deadline already passed, discarding.")
       return 0
 
@@ -300,7 +304,8 @@ class DTNnode:
     # Retrieve bundle from list
     bundle_to_send = self.send_queue[priority][0]
     # Check deadline and discard it if it passed
-    if (0 < bundle_to_send.get_deadline() <= current_time):
+    deadline = bundle_to_send.get_deadline()
+    if (deadline != -1 and deadline <= current_time):
       print("Bundle deadline already passed, discarding.")
       return -1
 

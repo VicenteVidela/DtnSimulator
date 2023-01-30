@@ -11,13 +11,13 @@ if len(args)==4:
   priorities_amount = int(args[2])
   time_graph = args[3]
 else:
-  raise ValueError('ValueError: 2 values needed from console: id, priorities_amout, time_graph')
+  raise ValueError('ValueError: 3 values needed from console: id, priorities_amout, time_graph')
 
 # Create the node
 satellite = DTNnode(id, priorities_amount)
 
-# Crate and assing the time graph from the file
-satellite.assing_time_graph(time_graph)
+# Create and assign the time graph from the file
+satellite.assign_time_graph(time_graph)
 
 # Get the address of it and bind it
 address = satellite.get_address(satellite.id)

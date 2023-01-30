@@ -6,7 +6,7 @@ class bundle:
   A class that describes a bundle to be sent in the DTN.
   """
 
-  def __init__(self, message: str, src: str, dest: str, size: str ='00000000',p: int =0, crit: bool =False, cust: bool =False, frag: bool =True, deadline: int =0) -> None:
+  def __init__(self, message: str, src: str, dest: str, size: str ='00000000',p: int =1, crit: bool =False, cust: bool =False, frag: bool =True, deadline: int =-1) -> None:
     """
     A class that describes a bundle to be sent in the DTN.
 
@@ -32,7 +32,7 @@ class bundle:
       Fragmentation flag. Determines whether the bundle can be fragmented or not.
     deadline : int
       TTL of the bundle. If this time is met, discard the bundle.
-      0 means infinite.
+      -1 means infinite.
     """
     self.message = message    # The message contained in this bundle
     self.source = src         # Source node of the bundle
@@ -70,7 +70,7 @@ class bundle:
     cust = True if custody=='1' else False
     frag = True if fragment=='1' else False
 
-    new_bundle = bundle(message, source, destination, size=size, p=int(priority), crit=crit, cust=cust, frag=frag, deadline=deadline)
+    new_bundle = bundle(message, source, destination, size=size, p=int(priority), crit=crit, cust=cust, frag=frag, deadline=int(deadline))
     if (len(str_splitted) >= 10):
       new_bundle.set_route(ast.literal_eval(str_splitted[9]))
     return new_bundle
