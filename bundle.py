@@ -42,7 +42,7 @@ class bundle:
     self.critical = crit      # Whether it is critical (must transmit to all possible nodes)
     self.custody = cust       # Custody request flag (if custody of the bundle was requested)
     self.fragment = frag      # Fragmentation authorized flag
-    self.deadline = deadline  # TTL in sec (0 means infinite)
+    self.deadline = deadline  # TTL for the bundle in sec (-1 means infinite)
     self.route = None         # For checking if it has an assigned route
     self.next_hop = None      # For using the route assigned
 

@@ -1,7 +1,7 @@
 import sys, time, os
 from DTNnode import DTNnode
 
-# For example: python3 satellite.py A 3 time_graphs/graph1.json
+# For example: python3 satellite.py A 3 graph1.json
 
 # Get variables from console
 args = sys.argv
@@ -11,7 +11,7 @@ if len(args)==4:
   priorities_amount = int(args[2])
   time_graph = args[3]
 else:
-  raise ValueError('ValueError: 3 values needed from console: id, priorities_amout, time_graph')
+  raise ValueError('ValueError: 3 values needed from console: id, amout of priority queues, time graph')
 
 # Create the node
 satellite = DTNnode(id, priorities_amount)
